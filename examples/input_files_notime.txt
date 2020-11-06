@@ -1,0 +1,2 @@
+http://crd-esgf-drc.ec.gc.ca/thredds/dodsC/esgD_dataroot/AR6/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp585/r1i1p1f1/fx/sftlf/gn/v20190429/sftlf_fx_CanESM5_ssp585_r1i1p1f1_gn.nc
+http://crd-esgf-drc.ec.gc.ca/thredds/dodsC/esgD_dataroot/AR6/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp585/r1i1p1f1/fx/orog/gn/v20190429/orog_fx_CanESM5_ssp585_r1i1p1f1_gn.nc

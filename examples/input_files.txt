@@ -1,0 +1,4 @@
+http://crd-esgf-drc.ec.gc.ca/thredds/dodsC/esgD_dataroot/AR6/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp585/r1i1p1f1/day/psl/gn/v20190429/psl_day_CanESM5_ssp585_r1i1p1f1_gn_20150101-21001231.nc
+http://crd-esgf-drc.ec.gc.ca/thredds/dodsC/esgD_dataroot/AR6/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp585/r1i1p1f1/day/ua/gn/v20190429/ua_day_CanESM5_ssp585_r1i1p1f1_gn_20150101-20201231.nc
+http://crd-esgf-drc.ec.gc.ca/thredds/dodsC/esgD_dataroot/AR6/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp585/r1i1p1f1/day/va/gn/v20190429/va_day_CanESM5_ssp585_r1i1p1f1_gn_20150101-20201231.nc
+http://crd-esgf-drc.ec.gc.ca/thredds/dodsC/esgD_dataroot/AR6/CMIP6/ScenarioMIP/CCCma/CanESM5/ssp585/r1i1p1f1/day/zg/gn/v20190429/zg_day_CanESM5_ssp585_r1i1p1f1_gn_20150101-20201231.nc
