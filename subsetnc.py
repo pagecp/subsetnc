@@ -41,88 +41,89 @@ if not( os.path.isdir('results')):
 files = []
 for f in allfiles:
 
-  f = f.strip()
-  print(f)
-  fb = f.rsplit('/', 1)[-1]
+   f = f.rstrip()
+   print(f)
+   fb = f.rsplit('/', 1)[-1]
 
-  process = True
+   process = True
 
-  if period_start_time == -1 :
-    dset = xr.open_dataset(f, mask_and_scale=False, decode_coords=True)
-    fbs = fb.strip('.nc')
-    outf = fbs + "_subset.nc"
-  else :
-    try:
-      dset = xr.open_dataset(f, chunks={'time': '100MB'}, mask_and_scale=False, decode_coords=True, decode_times=True, use_cftime=True)
-    except:
-      dset = xr.open_dataset(f, mask_and_scale=False, decode_coords=True, decode_times=True, use_cftime=True)
-    year_startf = dset.time.dt.year[0].data
-    month_startf = dset.time.dt.month[0].data
-    day_startf = dset.time.dt.day[0].data
-    startf = datetime.datetime(year_startf, month_startf, day_startf)
-    year_endf = dset.time.dt.year[-1:].data[0]
-    month_endf = dset.time.dt.month[-1:].data[0]
-    day_endf = dset.time.dt.day[-1:].data[0]
-    endf = datetime.datetime(year_endf, month_endf, day_endf)
-    if not ((startf >= start and startf <= end) or (endf >= start and endf <= end)) :
-      process = False
-    else :
-      if start > startf :
-        file_start = start
-        fstart_year = year_start
-        fstart_month = month_start
-        fstart_day = day_start
-      else :
-        file_start = startf
-        fstart_year = str(year_startf)
-        fstart_month = str(month_startf)
-        fstart_day = str(day_startf)
-      if end < endf :
-        file_end = end
-        fend_year = year_end
-        fend_month = month_end
-        fend_day = day_end
-      else :
-        file_end = endf
-        fend_year = str(year_endf)
-        fend_month = str(month_endf)
-        fend_day = str(day_endf)
-      fbs = fb.strip('.nc')
-      outf = fbs + "_subset_" + fstart_year + fstart_month + fstart_day + "-" + fend_year + fend_month + fend_day + ".nc"
-  try:
-    del dset.attrs['_NCProperties']
-  except:
-    pass
+   if period_start_time == -1 :
+     dset = xr.open_dataset(f, mask_and_scale=False, decode_coords=True)
+     fbs = fb.strip('.nc')
+     outf = fbs + "_subset.nc"
+   else :
+     try: 
+       dset = xr.open_dataset(f, chunks={'time': '100MB'}, mask_and_scale=False, decode_coords=True, decode_times=True, use_cftime=True)
+     except:
+       dset = xr.open_dataset(f, mask_and_scale=False, decode_coords=True, decode_times=True, use_cftime=True)
+     if 'time' in dset.keys():
+       year_startf = dset.time.dt.year[0]
+       month_startf = dset.time.dt.month[0]
+       day_startf = dset.time.dt.day[0]
+       startf = datetime.datetime(int(year_startf), int(month_startf), int(day_startf))
+       year_endf = dset.time.dt.year[-1:]
+       month_endf = dset.time.dt.month[-1:]
+       day_endf = dset.time.dt.day[-1:]
+       endf = datetime.datetime(int(year_endf), int(month_endf), int(day_endf))
+       if not ((start >= startf and start <= endf) or (end >= startf and end <= endf)) :
+         process = False
+       else :
+         if start > startf :
+           fstart_year = year_start
+           fstart_month = month_start
+           fstart_day = day_start
+         else :
+           fstart_year = dset.time.dt.strftime("%Y")[0].values
+           fstart_month = dset.time.dt.strftime("%m")[0].values
+           fstart_day = dset.time.dt.strftime("%d")[0].values
+         if end < endf :
+           fend_year = year_end
+           fend_month = month_end
+           fend_day = day_end
+         else :
+           fend_year = dset.time.dt.strftime("%Y")[-1].values
+           fend_month = dset.time.dt.strftime("%m")[-1].values
+           fend_day = dset.time.dt.strftime("%d")[-1].values
+       fbs = fb.strip('.nc')
+       outf = fbs + "_subset_" + fstart_year + fstart_month + fstart_day + "-" + fend_year + fend_month + fend_day + ".nc"
+     else:
+       period_start_time = -1
+       fbs = fb.strip('.nc')
+       outf = fbs + "_subset.nc"
+     try:
+       del dset.attrs['_NCProperties']
+     except:
+       pass
 
-  if process == True :
-    if minlon > maxlon or minlon < 0:
-      if period_start_time == -1 :
-        dset = dset.sel(lat=slice(minlat,maxlat))
-      else :
-        dset = dset.sel(time=slice(starttime,endtime), lat=slice(minlat,maxlat))
-    else:
-      if period_start_time == -1 :
-        dset = dset.sel(lon=slice(minlon,maxlon), lat=slice(minlat,maxlat))
-      else :
-        dset = dset.sel(time=slice(starttime,endtime), lon=slice(minlon,maxlon), lat=slice(minlat,maxlat))
+   if process == True :
+     if minlon > maxlon or minlon < 0:
+       if period_start_time == -1 :
+         dset = dset.sel(lat=slice(minlat,maxlat))
+       else :
+         dset = dset.sel(time=slice(starttime,endtime), lat=slice(minlat,maxlat))
+     else:
+       if period_start_time == -1 :
+         dset = dset.sel(lon=slice(minlon,maxlon), lat=slice(minlat,maxlat))
+       else :
+         dset = dset.sel(time=slice(starttime,endtime), lon=slice(minlon,maxlon), lat=slice(minlat,maxlat))
 
-    print("Saving to: "+"results/"+outf)
-    dims = dset.dims
-    dimsf = {k: v for k, v in dims.items() if k.startswith('lat') or k.startswith('lon') or k.startswith('time')}
-    enc = dict(dimsf)
-    enc = dict.fromkeys(enc, {'_FillValue': None})
+     print("Saving to: "+"results/"+outf)
+     dims = dset.dims
+     dimsf = {k: v for k, v in dims.items() if k.startswith('lat') or k.startswith('lon') or k.startswith('time')}
+     enc = dict(dimsf)
+     enc = dict.fromkeys(enc, {'_FillValue': None})
 
-    if period_start_time == -1 :
-      dset.to_netcdf(path="results/"+outf, mode='w', format='NETCDF4', engine='netcdf4', encoding=enc)
-    else:
-      files.append("results/"+outf)
-      dset.to_netcdf(path="results/"+outf, mode='w', format='NETCDF4', unlimited_dims='time', engine='netcdf4', encoding=enc)
-      tunits = dset.time.encoding['units']
-  else :
-    print("Not processing file because time range is outside time period requested.")
-
-  dset.close()
-  del dset
+     if period_start_time == -1 :
+       dset.to_netcdf(path="results/"+outf, mode='w', format='NETCDF4', engine='netcdf4', encoding=enc)
+     else:
+       files.append("results/"+outf)
+       dset.to_netcdf(path="results/"+outf, mode='w', format='NETCDF4', unlimited_dims='time', engine='netcdf4', encoding=enc)
+       tunits = dset.time.encoding['units']
+   else :
+     print("Not processing file because time range is outside time period requested.")
+       
+   dset.close()
+   del dset
 
 # Reorder longitudes if needed, and subset longitudes in that specific case differently (need to do it on local file for reasonable performance)
   if process == True :
