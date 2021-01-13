@@ -8,23 +8,46 @@ import xarray as xr
 import datetime
 
 input_file = sys.argv[1]
+
+# No spatial subsetting if one value is -9999 for a dimension
 minlat = float(sys.argv[2])
 maxlat = float(sys.argv[3])
 minlon = float(sys.argv[4])
 maxlon = float(sys.argv[5])
+if minlat == -9999 or maxlat == -9999:
+  minlat = -9999
+  maxlat = -9999
+if minlon == -9999 or maxlon == -9999:
+  minlon = -9999
+  maxlon = -9999
+
+# Optional time subsetting
 if len(sys.argv) > 6 :
   period_start_time = sys.argv[6]
   period_end_time = sys.argv[7]
 
-  year_start = period_start_time[0:4]
-  month_start = period_start_time[4:6]
-  day_start = period_start_time[6:8]
+  # 2 formats possible: YYYYMMDD or YYYY-MM-DD
+  if period_start_time[4] == '-' and period_start_time[7] == '-':
+    year_start = period_start_time[0:4]
+    month_start = period_start_time[5:7]
+    day_start = period_start_time[8:10]
+  else:
+    year_start = period_start_time[0:4]
+    month_start = period_start_time[4:6]
+    day_start = period_start_time[6:8]
+
   starttime = year_start+"-"+month_start+"-"+day_start
   start = datetime.datetime(int(year_start), int(month_start), int(day_start))
 
-  year_end = period_end_time[0:4]
-  month_end = period_end_time[4:6]
-  day_end = period_end_time[6:8]
+  if period_end_time[4] == '-' and period_end_time[7] == '-':
+    year_end = period_end_time[0:4]
+    month_end = period_end_time[5:7]
+    day_end = period_end_time[8:10]
+  else:
+    year_end = period_end_time[0:4]
+    month_end = period_end_time[4:6]
+    day_end = period_end_time[6:8]
+
   endtime = year_end+"-"+month_end+"-"+day_end
   end = datetime.datetime(int(year_end), int(month_end), int(day_end))
 
@@ -57,6 +80,7 @@ for f in allfiles:
      except:
        dset = xr.open_dataset(f, mask_and_scale=False, decode_coords=True, decode_times=True, use_cftime=True)
      if 'time' in dset.keys():
+       tunits = dset.time.encoding['units']
        year_startf = dset.time.dt.year[0]
        month_startf = dset.time.dt.month[0]
        day_startf = dset.time.dt.day[0]
@@ -97,28 +121,63 @@ for f in allfiles:
 
    if process == True :
      if minlon > maxlon or minlon < 0:
-       if period_start_time == -1 :
+       if period_start_time == -1 and minlat != -9999 :
+         print("Subsetting latitude")
          dset = dset.sel(lat=slice(minlat,maxlat))
-       else :
+       elif period_start_time != -1 and minlat != -9999 :
+         print("Subsetting time and latitude")
          dset = dset.sel(time=slice(starttime,endtime), lat=slice(minlat,maxlat))
+       elif period_start_time != -1 and minlat == -9999 :
+         print("Subsetting time")
+         dset = dset.sel(time=slice(starttime,endtime))
      else:
-       if period_start_time == -1 :
-         dset = dset.sel(lon=slice(minlon,maxlon), lat=slice(minlat,maxlat))
-       else :
+       if period_start_time != -1 and minlon != -9999 and minlat != -9999 :
+         print("Subsetting time, longitude and latitude")
          dset = dset.sel(time=slice(starttime,endtime), lon=slice(minlon,maxlon), lat=slice(minlat,maxlat))
+       elif period_start_time != -1 and minlon != -9999 and minlat == -9999 :
+         print("Subsetting time and longitude")
+         dset = dset.sel(time=slice(starttime,endtime), lon=slice(minlon,maxlon))
+       elif period_start_time != -1 and minlon == -9999 and minlat != -9999 :
+         print("Subsetting longitude and latitude")
+         dset = dset.sel(time=slice(starttime,endtime), lat=slice(minlat,maxlat))
+       elif period_start_time == -1 and minlon != -9999 and minlat != -9999 :
+         print("Subsetting longitude and latitude")
+         dset = dset.sel(lon=slice(minlon,maxlon), lat=slice(minlat,maxlat))
+       elif period_start_time == -1 and minlon != -9999 and minlat == -9999 :
+         print("Subsetting longitude")
+         dset = dset.sel(lon=slice(minlon,maxlon))
+       elif period_start_time == -1 and minlon != -9999 and minlat == -9999 :
+         print("Subsetting latitude")
+         dset = dset.sel(lat=slice(minlat,maxlat))
+       elif period_start_time != -1 and minlon == -9999 and minlat == -9999 :
+         print("Subsetting time")
+         dset = dset.sel(time=slice(starttime,endtime))
+       else :
+         sys.exit("Error subsetting selection...")
 
      print("Saving to: "+"results/"+outf)
      dims = dset.dims
-     dimsf = {k: v for k, v in dims.items() if k.startswith('lat') or k.startswith('lon') or k.startswith('time')}
+     dimsf = {k: v for k, v in dims.items() if k.startswith('lat') or k.startswith('lon')}
      enc = dict(dimsf)
      enc = dict.fromkeys(enc, {'_FillValue': None})
+     tdimsf = {k: v for k, v in dims.items() if k == 'time'}
+     if len(tdimsf) > 0:
+       tenc = dict(tdimsf)
+       tenc = dict.fromkeys(tenc, {'_FillValue': None, 'units': tunits})
+       enc.update(tenc)
+
+     varsd = dset.data_vars
+     varsdf = {k: v for k, v in varsd.items() if k.endswith('_bnds') or k.endswith('_bounds')}
+     if len(varsdf) > 0:
+       venc = dict(varsdf)
+       venc = dict.fromkeys(venc, {'_FillValue': None})
+       enc.update(venc)
 
      if period_start_time == -1 :
        dset.to_netcdf(path="results/"+outf, mode='w', format='NETCDF4', engine='netcdf4', encoding=enc)
      else:
        files.append("results/"+outf)
        dset.to_netcdf(path="results/"+outf, mode='w', format='NETCDF4', unlimited_dims='time', engine='netcdf4', encoding=enc)
-       tunits = dset.time.encoding['units']
    else :
      print("Not processing file because time range is outside time period requested.")
        
@@ -126,29 +185,28 @@ for f in allfiles:
    del dset
 
 # Reorder longitudes if needed, and subset longitudes in that specific case differently (need to do it on local file for reasonable performance)
-  if process == True :
-    if minlon > maxlon or minlon < 0:
-      print("Subsetting for non-contiguous longitude")
-      if period_start_time == -1 :
-        dsetl = xr.open_dataset("results/"+outf, mask_and_scale=False, decode_coords=True)
-      else :
-        try:
-          dsetl = xr.open_dataset("results/"+outf, chunks={'time': '100MB'}, mask_and_scale=False, decode_coords=True, decode_times=True, use_cftime=True)
-        except:
-          dsetl = xr.open_dataset("results/"+outf, mask_and_scale=False, decode_coords=True, decode_times=True, use_cftime=True)
-      saveattrs = dsetl.lon.attrs
-      dsetl = dsetl.assign_coords(lon=(((dsetl.lon + 180) % 360) - 180)).roll(lon=(dsetl.dims['lon'] // 2), roll_coords=True)
-      if minlon >= 180:
-        minlon = minlon - 360
-        if maxlon >= 180:
-          maxlon = maxlon - 360
-      dsetl = dsetl.sel(lon=slice(minlon,maxlon))
-      dsetl.lon.attrs = saveattrs
-      if period_start_time == -1 :
-        dsetl.to_netcdf(path="results/tmp"+outf, mode='w', format='NETCDF4', engine='netcdf4', encoding=enc)
-      else :
-        dsetl.time.encoding['units'] = tunits
-        dsetl.to_netcdf(path="results/tmp"+outf, mode='w', format='NETCDF4', unlimited_dims='time', engine='netcdf4', encoding=enc)
-      dsetl.close()
-      del dsetl
-      os.rename("results/tmp"+outf, "results/"+outf)
+   if process == True :
+     if (minlon > maxlon or minlon < 0) and maxlon != -9999 :
+       print("Subsetting for non-contiguous longitude")
+       if period_start_time == -1 :
+         dsetl = xr.open_dataset("results/"+outf, mask_and_scale=False, decode_coords=True)
+       else :
+         try:
+           dsetl = xr.open_dataset("results/"+outf, chunks={'time': '100MB'}, mask_and_scale=False, decode_coords=True, decode_times=True, use_cftime=True)
+         except:
+           dsetl = xr.open_dataset("results/"+outf, mask_and_scale=False, decode_coords=True, decode_times=True, use_cftime=True)
+       saveattrs = dsetl.lon.attrs
+       dsetl = dsetl.assign_coords(lon=(((dsetl.lon + 180) % 360) - 180)).roll(lon=(dsetl.dims['lon'] // 2), roll_coords=True)
+       if minlon >= 180:
+         minlon = minlon - 360
+         if maxlon >= 180:
+           maxlon = maxlon - 360
+       dsetl = dsetl.sel(lon=slice(minlon,maxlon))
+       dsetl.lon.attrs = saveattrs
+       if period_start_time == -1 :
+         dsetl.to_netcdf(path="results/tmp"+outf, mode='w', format='NETCDF4', engine='netcdf4', encoding=enc)
+       else :
+         dsetl.to_netcdf(path="results/tmp"+outf, mode='w', format='NETCDF4', unlimited_dims='time', engine='netcdf4', encoding=enc)
+       dsetl.close()
+       del dsetl
+       os.rename("results/tmp"+outf, "results/"+outf)
