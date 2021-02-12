@@ -80,7 +80,6 @@ for f in allfiles:
      except:
        dset = xr.open_dataset(f, mask_and_scale=False, decode_coords=True, decode_times=True, use_cftime=True)
      if 'time' in dset.keys():
-       tunits = dset.time.encoding['units']
        year_startf = dset.time.dt.year[0]
        month_startf = dset.time.dt.month[0]
        day_startf = dset.time.dt.day[0]
@@ -108,8 +107,8 @@ for f in allfiles:
            fend_year = dset.time.dt.strftime("%Y")[-1].values
            fend_month = dset.time.dt.strftime("%m")[-1].values
            fend_day = dset.time.dt.strftime("%d")[-1].values
-       fbs = fb.strip('.nc')
-       outf = fbs + "_subset_" + fstart_year + fstart_month + fstart_day + "-" + fend_year + fend_month + fend_day + ".nc"
+         fbs = fb.strip('.nc')
+         outf = fbs + "_subset_" + fstart_year + fstart_month + fstart_day + "-" + fend_year + fend_month + fend_day + ".nc"
      else:
        period_start_time = -1
        fbs = fb.strip('.nc')
@@ -162,6 +161,7 @@ for f in allfiles:
      enc = dict.fromkeys(enc, {'_FillValue': None})
      tdimsf = {k: v for k, v in dims.items() if k == 'time'}
      if len(tdimsf) > 0:
+       tunits = dset.time.encoding['units']
        tenc = dict(tdimsf)
        tenc = dict.fromkeys(tenc, {'_FillValue': None, 'units': tunits})
        enc.update(tenc)
